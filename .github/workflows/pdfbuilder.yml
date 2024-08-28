@@ -1,7 +1,5 @@
 on: 
   push:
-    branches:
-      - 'main'
     tags:
       - 'v*'
 
@@ -10,9 +8,15 @@ jobs:
     runs-on: ubuntu-latest
     name: Build the training PDF
     steps:
-      - uses: actions/checkout@v2
-      - uses: antaljanosbenjamin/compile-latex@v1.0.0
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Setup Nix
+        uses: cachix/install-nix-action@v25
         with:
-          file: master.tex
-          args: -pdf -pdflatex="pdflatex -interaction=nonstopmode" -use-make
-      - run: '(test -f master.pdf && echo PDF exists) || (echo PDF does not exist && exit 1)'
+          nix_path: nixpkgs=channel:nixos-unstable      
+      - name: Build PDF
+        run: nix-build
+      - name: Publish
+        run:  gh release create ${{ github.ref_name }} result/master.pdf --verify-tag --generate-notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
